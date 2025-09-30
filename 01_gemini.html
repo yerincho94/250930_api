@@ -3,7 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gemini</title>
+    <title>Gemini API</title>
   </head>
-  <body></body>
+  <body>
+    <label>API KEY : <input type="text" id="apiKey" /></label>
+    <button id="callBtn">호출</button>
+    <script>
+      // 1. input에서 api key를 읽어들여오고 callBtn 이벤트 리스너
+      const apiKeyInput = document.querySelector("#apiKey");
+      const callBtn = document.querySelector("#callBtn");
+
+      callBtn.addEventListener("click", async () => {
+        const apiKey = apiKeyInput.value; // 처음부터 value로 하면 되지 않나요?
+        // value -> 문자열 -> '값'이 할당이 된다 -> 처음부터 외부에 콜백 전에 복사해놓으면 '빈 값'이 복사되어 있음
+        console.log(apiKey);
+
+        // url외에도 여러가지 방식이 있다.
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`; //models/{모델명}:{기능명}
+
+        //payload(데이터)
+        const payload = {
+          contents: [
+            {
+              parts: [{ text: "오늘 점심 뭐 먹지?" }],
+            },
+          ],
+        };
+
+        const response = await fetch(url, {
+          // method : "GET",  //form -> get, post
+          //get -> 주소창에 필요한 데이터를 담아서 전달하는 방식
+          method: "POST", //Body -> PayLoad(데이터) -> 보안적으로 조금 더 낫다.
+          headers: {
+            // 보안, 메터 데이터
+            "x-goog-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+          //직열화된 문자열이어야함!
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        console.log(data.candidates[0].content.parts[0].text);
+      });
+    </script>
+  </body>
 </html>
