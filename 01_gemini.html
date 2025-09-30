@@ -6,30 +6,84 @@
     <title>Gemini API</title>
   </head>
   <body>
-    <label>API KEY : <input type="text" id="apiKey" /></label>
-    <button id="callBtn">호출</button>
+    <section>
+      <label>API KEY : <input type="text" id="apiKey" /></label> <br />
+      <label>
+        Gemini Model
+        <select id="geminiModel">
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+        </select>
+      </label>
+      <br />
+      <label> 질문 : <input type="text" id="question" /> </label> <br />
+
+      <button id="callBtn">호출</button>
+    </section>
+    <!-- 4. dom으로 대화 내용 그리기 -->
+    <section id="dialog"></section>
     <script>
       // 1. input에서 api key를 읽어들여오고 callBtn 이벤트 리스너
       const apiKeyInput = document.querySelector("#apiKey");
       const callBtn = document.querySelector("#callBtn");
+      const geminiModelInput = document.querySelector("#geminiModel");
+      const questionInput = document.querySelector("#question");
+      const dialog = document.querySelector("#dialog");
+      const context = []; //이전 대화 기록을 parts 형태로 넣을꺼임
 
       callBtn.addEventListener("click", async () => {
         const apiKey = apiKeyInput.value; // 처음부터 value로 하면 되지 않나요?
         // value -> 문자열 -> '값'이 할당이 된다 -> 처음부터 외부에 콜백 전에 복사해놓으면 '빈 값'이 복사되어 있음
-        console.log(apiKey);
+        console.log("apiKey :", apiKey);
+        // 3. input에서 데이터 받기
+        const geminiModel = geminiModelInput.value;
+        const question = questionInput.value;
 
         // url외에도 여러가지 방식이 있다.
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`; //models/{모델명}:{기능명}
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`; //models/{모델명}:{기능명}
+
+        console.log(geminiModel, url);
 
         //payload(데이터)
+        //5.instruction & context 넣기
+        const instruction = `<persona>상냥하고 말이 친절하지만 전문성 있는 내용을 전달. 그렇다고 과잉 친절은 필요없음. 코딩 및 식사 메뉴 추천에 특화</persona>
+        <task>전달받는 요청사항에 응대</task>
+        <context>20-30대 한국인. 프로그래밍을 배우고 있음. 현재 JS 실습 중.</context>
+        <format>한글 위주, 200자 이내</format>`;
+
+        console.log(context);
         const payload = {
-          contents: [
+          system_instruction: {
+            parts: [{ text: instruction }],
+          }, //200자 이내가 가장 큰 변화
+          //   contents: [
+          //     {
+          //       ...context,
+          //       // text를 여러개를 넣어서 instruction을 넣을 수 있음.
+          //       //   parts: [{ text: "오늘 점심 뭐 먹지?" }],
+          //       parts: [{ text: question }],
+          //     },
+          //   ],
+          contents: context,
+        };
+        const questionBox = document.createElement("div");
+        questionBox.innerHTML = `
+            <h4>질문</h4>
+            <p>${question}</p>
+            <hr />
+        `;
+        //질문의 맥락 넣기
+        context.push({
+          role: "user",
+          parts: [
             {
-              parts: [{ text: "오늘 점심 뭐 먹지?" }],
+              text: question,
             },
           ],
-        };
-
+        });
+        dialog.append(questionBox);
+        //2. 외부 API로 요청 전달
         const response = await fetch(url, {
           // method : "GET",  //form -> get, post
           //get -> 주소창에 필요한 데이터를 담아서 전달하는 방식
@@ -43,7 +97,24 @@
           body: JSON.stringify(payload),
         });
         const data = await response.json();
-        console.log(data.candidates[0].content.parts[0].text);
+        // console.log(data);
+        // console.log(data.candidates[0].content.parts[0].text);
+        const answer = data.candidates[0].content.parts[0].text;
+        const answerBox = document.createElement("div");
+        answerBox.innerHTML = `
+            <h4>답변</h4>
+            <p>${answer}</p>
+        `;
+        //답변을 맥락 넣기
+        context.push({
+          role: "model",
+          parts: [
+            {
+              text: answer,
+            },
+          ],
+        });
+        dialog.append(answerBox);
       });
     </script>
   </body>
